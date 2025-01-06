@@ -13,15 +13,15 @@ import os
 # Import your forms from the forms.py
 from forms import CreatePostForm, RegisterForm, LoginForm
 
-app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('FLASK_KEY')
+main = Flask(__name__)
+main.config['SECRET_KEY'] = os.environ.get('FLASK_KEY')
 # '8BYkEfBA6O6donzWlSihBXox7C0sKR6b'
-ckeditor = CKEditor(app)
-Bootstrap5(app)
+ckeditor = CKEditor(main)
+Bootstrap5(main)
 
 # TODO: Configure Flask-Login
 login_manager = LoginManager()
-login_manager.init_app(app)
+login_manager.init_app(main)
 login_manager.login_view = "login"  # Redirect users to login page if they are not authenticated
 
 # CREATE DATABASE
@@ -29,7 +29,7 @@ class Base(DeclarativeBase):
     pass
 
 db = SQLAlchemy(model_class=Base)
-db.init_app(app)
+db.init_app(main)
 
 
 # CONFIGURE TABLES
@@ -68,7 +68,7 @@ class BlogPost(db.Model):
 
 
 
-with app.app_context():
+with main.app_context():
     db.create_all()  # This will create the tables based on the updated models
 
 # Flask-Login user loader function
@@ -85,7 +85,7 @@ def admin_only(f):
     return decorated_function
 
 
-@app.route("/register", methods=["GET", "POST"])
+@main.route("/register", methods=["GET", "POST"])
 def register():
     form = RegisterForm()
     if form.validate_on_submit():
@@ -115,7 +115,7 @@ def register():
 
     return render_template("register.html", form=form)
 
-@app.route('/login', methods=["GET", "POST"])
+@main.route('/login', methods=["GET", "POST"])
 def login():
     form = LoginForm()
     if form.validate_on_submit():
@@ -131,20 +131,20 @@ def login():
 
     return render_template("login.html", form=form)
 
-@app.route('/logout')
+@main.route('/logout')
 def logout():
     logout_user()
 
     return redirect(url_for('get_all_posts'))
 
 
-@app.route('/')
+@main.route('/')
 def get_all_posts():
     result = db.session.execute(db.select(BlogPost))
     posts = result.scalars().all()
     return render_template("index.html", all_posts=posts)
 
-@app.route("/post/<int:post_id>")
+@main.route("/post/<int:post_id>")
 @login_required
 def show_post(post_id):
     requested_post = db.get_or_404(BlogPost, post_id)
@@ -152,7 +152,7 @@ def show_post(post_id):
         abort(404)
     return render_template("post.html", post=requested_post)
 
-@app.route("/new-post", methods=["GET", "POST"])
+@main.route("/new-post", methods=["GET", "POST"])
 @admin_only
 def add_new_post():
     form = CreatePostForm()
@@ -170,7 +170,7 @@ def add_new_post():
         return redirect(url_for("get_all_posts"))
     return render_template("make-post.html", form=form)
 
-@app.route("/edit-post/<int:post_id>", methods=["GET", "POST"])
+@main.route("/edit-post/<int:post_id>", methods=["GET", "POST"])
 @admin_only  # Only accessible by the admin
 def edit_post(post_id):
     post = db.get_or_404(BlogPost, post_id)  # Fetch the post by ID
@@ -194,7 +194,7 @@ def edit_post(post_id):
 
 
 
-@app.route("/delete/<int:post_id>")
+@main.route("/delete/<int:post_id>")
 @admin_only  # Only accessible by the admin
 def delete_post(post_id):
     post_to_delete = db.get_or_404(BlogPost, post_id)
@@ -203,12 +203,12 @@ def delete_post(post_id):
     return redirect(url_for('get_all_posts'))
 
 
-@app.route("/about")
+@main.route("/about")
 def about():
     return render_template("about.html")
 
 
-@app.route("/contact")
+@main.route("/contact")
 def contact():
     return render_template("contact.html")
 
@@ -217,4 +217,4 @@ def contact():
 
 
 if __name__ == "__main__":
-    app.run(debug=False, port=5002)
+    main.run(debug=False, port=5002)
