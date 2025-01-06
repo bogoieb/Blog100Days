@@ -1,0 +1,28 @@
+# Ignore Python cache and virtual environments
+__pycache__/
+*.pyc
+*.pyo
+venv/
+
+# Ignore environment variables and credentials
+.env
+*.key
+*.pem
+
+# Ignore log files and temporary files
+*.log
+*.tmp
+.DS_Store  # macOS metadata file
+
+# Ignore compiled binaries (C, C++, etc.)
+*.o
+*.exe
+
+# Ignore VS Code and JetBrains project files
+.vscode/
+.idea/
+*.iml
+
+# Ignore database and data files
+*.sqlite3
+*.db
