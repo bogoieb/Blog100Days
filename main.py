@@ -29,6 +29,7 @@ class Base(DeclarativeBase):
     pass
 
 db = SQLAlchemy(model_class=Base)
+main.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DB_URI')
 db.init_app(main)
 
 
