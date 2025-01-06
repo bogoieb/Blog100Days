@@ -9,11 +9,13 @@ from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import Integer, String, Text
 from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
+import os
 # Import your forms from the forms.py
 from forms import CreatePostForm, RegisterForm, LoginForm
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = '8BYkEfBA6O6donzWlSihBXox7C0sKR6b'
+app.config['SECRET_KEY'] = os.environ.get('FLASK_KEY')
+# '8BYkEfBA6O6donzWlSihBXox7C0sKR6b'
 ckeditor = CKEditor(app)
 Bootstrap5(app)
 
@@ -25,7 +27,7 @@ login_manager.login_view = "login"  # Redirect users to login page if they are n
 # CREATE DATABASE
 class Base(DeclarativeBase):
     pass
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///posts.db'
+
 db = SQLAlchemy(model_class=Base)
 db.init_app(app)
 
@@ -113,7 +115,6 @@ def register():
 
     return render_template("register.html", form=form)
 
-
 @app.route('/login', methods=["GET", "POST"])
 def login():
     form = LoginForm()
@@ -122,6 +123,7 @@ def login():
         user = User.query.filter_by(email=form.email.data).first()
         if user and user.check_password(form.password.data):
             login_user(user)
+            flash("Login successful!", "success")
             return redirect(url_for('get_all_posts'))  # Redirect to home page
         else:
             flash("Login failed. Check your email and/or password and try again.", "danger")
@@ -211,5 +213,8 @@ def contact():
     return render_template("contact.html")
 
 
+
+
+
 if __name__ == "__main__":
-    app.run(debug=True, port=5002)
+    app.run(debug=False, port=5002)
