@@ -14,7 +14,7 @@ import os
 from forms import CreatePostForm, RegisterForm, LoginForm
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('FLASK_KEY')
+app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'FLASK_KEY')
 # '8BYkEfBA6O6donzWlSihBXox7C0sKR6b'
 ckeditor = CKEditor(app)
 Bootstrap5(app)
@@ -32,7 +32,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DB_URI')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # Optional, reduces overhead
 
 db = SQLAlchemy(model_class=Base)
-
+db.init_app(app)
 
 # CONFIGURE TABLES
 
@@ -218,5 +218,5 @@ def contact():
 
 
 
-if __name__ == "__app__":
-    app.run(debug=False, port=5002)
+if __name__ == "__main__":
+    app.run(debug=True, port=5002)
