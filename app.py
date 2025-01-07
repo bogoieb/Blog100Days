@@ -28,9 +28,10 @@ login_manager.login_view = "login"  # Redirect users to login page if they are n
 class Base(DeclarativeBase):
     pass
 
-db = SQLAlchemy(model_class=Base)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DB_URI')
-db.init_app(app)
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # Optional, reduces overhead
+
+db = SQLAlchemy(model_class=Base)
 
 
 # CONFIGURE TABLES
