@@ -167,13 +167,6 @@ def get_all_posts():
     posts = result.scalars().all()
     return render_template("index.html", all_posts=posts)
 
-@app.route("/post/<int:post_id>")
-@login_required
-def show_post(post_id):
-    requested_post = db.get_or_404(BlogPost, post_id)
-    if requested_post is None:
-        abort(404)
-    return render_template("post.html", post=requested_post)
 
 @app.route("/new-post", methods=["GET", "POST"])
 @admin_only
