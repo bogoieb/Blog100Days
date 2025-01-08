@@ -2,67 +2,84 @@
 
 <!-- Page Header-->
 <header class="masthead" style="background-image: url('{{ post.img_url }}')">
-  <div class="container position-relative px-4 px-lg-5">
-    <div class="row gx-4 gx-lg-5 justify-content-center">
-      <div class="col-md-10 col-lg-8 col-xl-7">
-        <div class="post-heading">
-          <h1>{{ post.title }}</h1>
-          <h2 class="subheading">{{ post.subtitle }}</h2>
-          <span class="meta">
-            Posted by
-            <a href="#">{{ post.creator.username }}</a> 
-            on {{ post.date }}
-          </span>
+    <div class="container position-relative px-4 px-lg-5">
+        <div class="row gx-4 gx-lg-5 justify-content-center">
+            <div class="col-md-10 col-lg-8 col-xl-7">
+                <div class="post-heading">
+                    <h1>{{ post.title }}</h1>
+                    <h2 class="subheading">{{ post.subtitle }}</h2>
+                    <span class="meta">
+                        Posted by
+                        <a href="#">{{ post.creator.username }}</a>
+                        on {{ post.date }}
+                    </span>
+                </div>
+            </div>
         </div>
-      </div>
     </div>
-  </div>
 </header>
 
 <!-- Post Content -->
 <article>
-  <div class="container px-4 px-lg-5">
-    <div class="row gx-4 gx-lg-5 justify-content-center">
-      <div class="col-md-10 col-lg-8 col-xl-7">
-        {{ post.body|safe }}
+    <div class="container px-4 px-lg-5">
+        <div class="row gx-4 gx-lg-5 justify-content-center">
+            <div class="col-md-10 col-lg-8 col-xl-7">
+                <!-- Post Content -->
+                {{ post.body|safe }}
+                
+                <!-- Edit Button for Admin -->
+                {% if current_user.id == 1 %}
+                <div class="d-flex justify-content-end mb-4">
+                    <a class="btn btn-primary" href="{{ url_for('edit_post', post_id=post.id) }}">Edit Post</a>
+                </div>
+                {% endif %}
 
-        {% if current_user.id == 1 %}
-        <div class="d-flex justify-content-end mb-4">
-          <a class="btn btn-primary" href="{{ url_for('edit_post', post_id=post.id) }}">Edit Post</a>
+                <!-- Comments Section -->
+                <div class="comments-section mt-5">
+                    <h3>Comments</h3>
+                    
+                    <!-- Comment Form -->
+                    {% if current_user.is_authenticated %}
+                    <form method="POST" class="comment-form mb-4">
+                        {{ comment_form.csrf_token }}
+                        <div class="form-group">
+                            {{ comment_form.text.label }}
+                            {{ comment_form.text(class="form-control", rows="3") }}
+                        </div>
+                        <button type="submit" class="btn btn-primary mt-2">Post Comment</button>
+                    </form>
+                    {% else %}
+                    <p><a href="{{ url_for('login') }}">Login</a> to post comments.</p>
+                    {% endif %}
+
+                    <!-- Comments List -->
+                    <div class="comments-list">
+                        {% if post.comments %}
+                            {% for comment in post.comments %}
+                            <div class="comment border-bottom pb-3 mb-3">
+                                <div class="d-flex">
+                                    <div class="commenter-image me-3">
+                                        <img src="{{ url_for('static', filename='assets/img/default-avatar.png') }}" 
+                                             alt="Commenter" 
+                                             class="rounded-circle" 
+                                             width="40" 
+                                             height="40">
+                                    </div>
+                                    <div class="comment-content">
+                                        <p class="comment-text mb-1">{{ comment.text }}</p>
+                                        <small class="text-muted">Posted by: {{ comment.author.username }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p>No comments yet. Be the first to comment!</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
         </div>
-        {% endif %}
-
-        <!-- Comments Area -->
-        <div class="comment">
-          <ul class="commentList">
-            {% for comment in post.comments %}
-            <li>
-              <div class="commenterImage">
-                <img src="{{ comment.author.gravatar(size=40) }}" alt="Commenter Image" />
-              </div>
-              <div class="commentText">
-                <p>{{ comment.text }}</p>
-                <span class="date sub-text">{{ comment.author.username }}</span>
-              </div>
-            </li>
-            {% else %}
-            <li>No comments yet. Be the first to comment!</li>
-            {% endfor %}
-          </ul>
-        </div>
-
-        {% if current_user.is_authenticated %}
-        <form method="POST">
-          {{ comment_form.hidden_tag() }}
-          {{ comment_form.text.label }} {{ comment_form.text() }}
-          <button type="submit" class="btn btn-primary">Submit Comment</button>
-        </form>
-        {% else %}
-        <p>Please log in to leave a comment.</p>
-        {% endif %}
-      </div>
     </div>
-  </div>
 </article>
 
 {% include "footer.html" %}

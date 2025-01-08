@@ -14,6 +14,8 @@ import os
 from forms import CreatePostForm, RegisterForm, LoginForm, FlaskForm
 from wtforms import TextAreaField
 from wtforms.validators import DataRequired
+
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'FLASK_KEY')
 
@@ -93,6 +95,17 @@ class CommentForm(FlaskForm):
 
 with app.app_context():
     db.create_all()  # This will create the tables based on the updated models
+    
+    
+gravatar = Gravatar(app,
+                   size=100,
+                   rating='g',
+                   default='retro',
+                   force_default=False,
+                   force_lower=False,
+                   use_ssl=False,
+                   base_url=None)
+
 
 # Flask-Login user loader function
 @login_manager.user_loader
@@ -102,8 +115,8 @@ def load_user(user_id):
 def admin_only(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if current_user.id != 1:
-            return redirect(url_for('index'))  # Redirect to homepage or other route
+        if not current_user.is_authenticated or current_user.id != 1:
+            return redirect(url_for('get_all_posts'))  # Changed from 'index' to 'get_all_posts'
         return f(*args, **kwargs)
     return decorated_function
 
@@ -186,23 +199,38 @@ def add_new_post():
         return redirect(url_for("get_all_posts"))
     return render_template("make-post.html", form=form)
 
+
+# Update the show_post route to handle comments properly
 @app.route("/post/<int:post_id>", methods=["GET", "POST"])
 def show_post(post_id):
     requested_post = db.get_or_404(BlogPost, post_id)
     comment_form = CommentForm()
 
     if comment_form.validate_on_submit():
+        if not current_user.is_authenticated:
+            flash("Please login to post comments.", "error")
+            return redirect(url_for('login'))
+            
         new_comment = Comment(
             text=comment_form.text.data,
-            post_id=requested_post.id,
-            author_id=current_user.id  # Get the current logged-in user's ID
+            post=requested_post,  # Use the relationship
+            author=current_user   # Use the relationship
         )
-        db.session.add(new_comment)
-        db.session.commit()
-        flash("Your comment has been posted!", "success")
-        return redirect(url_for('show_post', post_id=requested_post.id))  # Reload the page to show new comment
+        
+        try:
+            db.session.add(new_comment)
+            db.session.commit()
+            flash("Your comment has been posted!", "success")
+        except Exception as e:
+            db.session.rollback()
+            flash("Error posting comment. Please try again.", "error")
+            print(f"Error: {str(e)}")  # For debugging
+            
+        return redirect(url_for('show_post', post_id=post_id))
 
-    return render_template("post.html", post=requested_post, comment_form=comment_form)
+    # Get all comments for this post
+    comments = Comment.query.filter_by(post_id=post_id).order_by(Comment.id.desc()).all()
+    return render_template("post.html", post=requested_post, comment_form=comment_form, comments=comments)
 
 
 @app.route("/delete/<int:post_id>")
@@ -229,3 +257,9 @@ def contact():
 
 if __name__ == "__main__":
     app.run(debug=True, port=5002)
+
+
+# Hello
+# Hello@hello.com  
+# hello123 
+# hello123
