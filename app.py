@@ -11,28 +11,34 @@ from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 # Import your forms from the forms.py
-from forms import CreatePostForm, RegisterForm, LoginForm
-
+from forms import CreatePostForm, RegisterForm, LoginForm, FlaskForm
+from wtforms import TextAreaField
+from wtforms.validators import DataRequired
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'FLASK_KEY')
-# '8BYkEfBA6O6donzWlSihBXox7C0sKR6b'
+
+# CKEditor and Bootstrap5
 ckeditor = CKEditor(app)
 Bootstrap5(app)
 
-# TODO: Configure Flask-Login
+# Flask-Login configuration
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"  # Redirect users to login page if they are not authenticated
 
-# CREATE DATABASE
+# Database Configuration
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'postgresql://posts_db_er94_user:3FhSViNG7znjjdYnx4Bf0Ba9UrpZWCde@dpg-ctun64pu0jms73f9d2sg-a.oregon-postgres.render.com/posts_db_er94')
+
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # Optional, reduces overhead
+
+# Initialize the database
 class Base(DeclarativeBase):
     pass
 
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # Optional, reduces overhead
-
 db = SQLAlchemy(model_class=Base)
 db.init_app(app)
+
+
 
 # CONFIGURE TABLES
 
@@ -52,6 +58,16 @@ class User(UserMixin, db.Model):
     def check_password(self, password):
         """Checks if the entered password matches the hashed one."""
         return check_password_hash(self.password, password)
+    
+    
+class Comment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    text = db.Column(db.Text, nullable=False)
+    post_id = db.Column(db.Integer, db.ForeignKey('blog_posts.id'), nullable=False)
+    author_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+    post = db.relationship('BlogPost', backref='comments', lazy=True)
+    author = db.relationship('User', backref='comments', lazy=True)
 
 class BlogPost(db.Model):
     __tablename__ = "blog_posts"
@@ -67,6 +83,11 @@ class BlogPost(db.Model):
     
     # Relationship to the User model (no need for back_populates)
     # The 'backref' 'creator' is automatically created in the 'User' model
+    
+
+class CommentForm(FlaskForm):
+    text = TextAreaField('Comment', validators=[DataRequired()])
+
 
 
 
@@ -172,28 +193,23 @@ def add_new_post():
         return redirect(url_for("get_all_posts"))
     return render_template("make-post.html", form=form)
 
-@app.route("/edit-post/<int:post_id>", methods=["GET", "POST"])
-@admin_only  # Only accessible by the admin
-def edit_post(post_id):
-    post = db.get_or_404(BlogPost, post_id)  # Fetch the post by ID
-    edit_form = CreatePostForm(
-        title=post.title,
-        subtitle=post.subtitle,
-        img_url=post.img_url,
-        body=post.body
-    )
-    
-    if edit_form.validate_on_submit():
-        post.title = edit_form.title.data
-        post.subtitle = edit_form.subtitle.data
-        post.img_url = edit_form.img_url.data
-        post.body = edit_form.body.data
-        post.author = current_user  # Update the post author with the current logged-in user
-        db.session.commit()
-        return redirect(url_for("show_post", post_id=post.id))  # Redirect to the post page
-    
-    return render_template("make-post.html", form=edit_form, post=post, is_edit=True)  # Pass post to the template
+@app.route("/post/<int:post_id>", methods=["GET", "POST"])
+def show_post(post_id):
+    requested_post = db.get_or_404(BlogPost, post_id)
+    comment_form = CommentForm()
 
+    if comment_form.validate_on_submit():
+        new_comment = Comment(
+            text=comment_form.text.data,
+            post_id=requested_post.id,
+            author_id=current_user.id  # Get the current logged-in user's ID
+        )
+        db.session.add(new_comment)
+        db.session.commit()
+        flash("Your comment has been posted!", "success")
+        return redirect(url_for('show_post', post_id=requested_post.id))  # Reload the page to show new comment
+
+    return render_template("post.html", post=requested_post, comment_form=comment_form)
 
 
 @app.route("/delete/<int:post_id>")
